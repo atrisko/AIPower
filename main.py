@@ -8,7 +8,7 @@ from google.genai import types
 
 
 def main():
-    print("Hello from aipower!")
+    print("Hello from AIpower!")
     load_dotenv()
 
     api_key = os.environ.get("GEMINI_API_KEY")
