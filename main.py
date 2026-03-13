@@ -4,31 +4,32 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompt import system_prompt
-from call_function import available_functions
+from call_function import available_functions, call_function
 
 
 
 
 def main():
-    print("Hello from AIpower!")
-    load_dotenv()
+   
 
+    parser = argparse.ArgumentParser(description='User prompt for Gemini API')
+    parser.add_argument('prompt', type=str, help='The prompt to send to the Gemini')
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    args = parser.parse_args()
+
+    print("Hello from AIpower!")
+
+    load_dotenv()
     api_key = os.environ.get("GEMINI_API_KEY")
-    
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY environment variable not set.")
     
     client = genai.Client(api_key=api_key)
 
-    parser = argparse.ArgumentParser(description='User prompt for Gemini API')
-    parser.add_argument('prompt', type=str, nargs='+',help='The prompt to send to the Gemini')
-    parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
-    args = parser.parse_args()
-
-    messages = [types.Content(role="user", parts=[types.Part(text=" ".join(args.prompt))])]
+    messages = [types.Content(role="user", parts=[types.Part(text=args.prompt)])]
 
     if args.verbose:
-        print(f"User prompt: {" ".join(args.prompt)}\n")
+        print(f"User prompt: {args.prompt}")
 
     generate_content(client, messages, args.verbose)
     
@@ -38,7 +39,8 @@ def generate_content(client, messages, verbose):
         contents=messages,
         config=types.GenerateContentConfig(
             system_instruction=system_prompt,
-            tools=[available_functions],),
+            tools=[available_functions],
+            temperature=0),
         )
     
     if not response.usage_metadata:
@@ -50,11 +52,25 @@ def generate_content(client, messages, verbose):
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
     
 
-    print("Response from Gemini:")
     if response.function_calls:
+        function_results = []
         for function_call in response.function_calls:
-            print(f"Calling function: {function_call.name}({function_call.args})")
-    if not response.function_calls:
+            try:
+                function_call_result = call_function(function_call, verbose)
+            except Exception as e:
+                print(f"Error: {e}")
+            if (
+                not function_call_result.parts
+                or not function_call_result.parts[0].function_response
+                or not function_call_result.parts[0].function_response.response
+            ):
+                raise RuntimeError(f"Empty function response for {function_call.name}")
+            function_results.append(function_call_result.parts[0])
+    if verbose:
+        print(f"-> {function_call_result.parts[0].function_response.response}")
+        
+    else:
+        print("Response from Gemini:")
         print(response.text)
 
     

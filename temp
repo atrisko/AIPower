@@ -1,0 +1,7 @@
+if (
+                not function_call_result.parts
+                or not function_call_result.parts[0].function_response
+                or not function_call_result.parts[0].function_response.response
+            ):
+                raise RuntimeError(f"Empty function response for {function_call.name}")
+            
