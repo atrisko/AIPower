@@ -1,5 +1,6 @@
 import os
 import argparse
+import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
@@ -31,8 +32,18 @@ def main():
     if args.verbose:
         print(f"User prompt: {args.prompt}")
 
-    generate_content(client, messages, args.verbose)
-    
+
+    for _ in range(20):  # Limit to 20 iterations to prevent infinite loops
+        final = generate_content(client, messages, args.verbose)
+        if final:
+            print("Final response:")
+            print(final)
+            return
+        
+    print("Reached maximum iterations without a final response.")
+    sys.exit(1)
+                     
+
 def generate_content(client, messages, verbose):
     response = client.models.generate_content(
         model='gemini-2.5-flash',
@@ -52,6 +63,11 @@ def generate_content(client, messages, verbose):
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
     
 
+
+    if response.candidates:
+            for candidate in response.candidates:
+                messages.append(candidate.content)
+
     if response.function_calls:
         function_results = []
         for function_call in response.function_calls:
@@ -66,12 +82,14 @@ def generate_content(client, messages, verbose):
             ):
                 raise RuntimeError(f"Empty function response for {function_call.name}")
             function_results.append(function_call_result.parts[0])
-    if verbose:
-        print(f"-> {function_call_result.parts[0].function_response.response}")
+        if verbose:
+            print(f"-> {function_call_result.parts[0].function_response.response}")
+        messages.append(types.Content(role="user", parts=function_results))
+       
         
     else:
-        print("Response from Gemini:")
-        print(response.text)
+        #print("Response from Gemini:")
+        return response.text
 
     
 
