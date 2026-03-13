@@ -3,6 +3,8 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from prompt import system_prompt
+from call_function import available_functions
 
 
 
@@ -33,7 +35,11 @@ def main():
 def generate_content(client, messages, verbose):
     response = client.models.generate_content(
         model='gemini-2.5-flash',
-        contents=messages)
+        contents=messages,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            tools=[available_functions],),
+        )
     
     if not response.usage_metadata:
         raise RuntimeError("Response is missing usage metadata.")
@@ -45,7 +51,11 @@ def generate_content(client, messages, verbose):
     
 
     print("Response from Gemini:")
-    print(response.text)
+    if response.function_calls:
+        for function_call in response.function_calls:
+            print(f"Calling function: {function_call.name}({function_call.args})")
+    if not response.function_calls:
+        print(response.text)
 
     
 
