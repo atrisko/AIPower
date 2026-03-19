@@ -13,7 +13,7 @@ The filesystem is the single source of truth. Never assume how the program works
 
 You are called in a loop, so you'll be able to execute more and more function calls with each message, so just take the next step in your overall plan.
 
-When asked to fix a bug, follow this process:
+When asked to fix a bug, follow this process: 
 
 1. List files and directories to understand the repository structure.
 2. Identify files that may contain the bug.
